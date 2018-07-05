@@ -9,14 +9,13 @@ from __future__ import unicode_literals, print_function, division
 import pandas as pd
 import torch
 import torch.nn as nn
-import matplotlib.pyplot as plt
 import pickle
 import bcolz
+import sys
 import numpy as np
 import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
 from preprocess import clean_text
-plt.switch_backend('agg')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # =============================================================================
 # EMBEDDING
@@ -214,9 +213,15 @@ def main():
     train, test = train_test_split(data, random_state=42, test_size=0.4, shuffle=True)
     
     print("Data Split")
-    encoder1 = torch.load('encoder.network')
-    fnn1 = torch.load('fcn.network')
-    sentence = "hello"
+
+    target_vocab  = English.word2index.keys()
+    
+    weights_matrix = get_weights_matrix(target_vocab)
+    encoder1 = EncoderRNN(weights_matrix, English.n_words, hidden_size).to(device)
+    fnn1 = FullyConnectedNN(hidden_size).to(device)
+    encoder1.load_state_dict(torch.load('cpu_encoder.pt'))
+    fnn1.load_state_dict(torch.load('cpu_fcn.pt'))
+    sentence = sys.argv[1]
     sentence = clean_text(sentence)
     output = evaluate(encoder1, fnn1, sentence, English)
     output = F.sigmoid(output)
@@ -224,7 +229,7 @@ def main():
         output = 1
     else:
         output = 0
-    return output
+    print(output)
 
 if __name__ == "__main__":
     main()
